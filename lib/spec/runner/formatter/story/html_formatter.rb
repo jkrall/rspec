@@ -15,9 +15,15 @@ module Spec
             @story_text = ""
             @scenario_failed = false
             @story_failed = false
+
+            @successful_scenario_count = 0
+            @pending_scenario_count = 0
+            @failed_scenarios = []
+            @pending_steps = []
           end
           
           def run_started(count)
+            @count = count
             @output.puts <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html 
@@ -51,6 +57,32 @@ EOF
 
           def run_ended
             @output.puts <<-EOF
+     <p class='trace'>
+EOF
+            
+            @output.puts "#@count scenarios: #@successful_scenario_count succeeded, #{@failed_scenarios.size} failed, #@pending_scenario_count pending <br/>"
+            unless @pending_steps.empty?
+              @output.puts "\nPending Steps: <br/>"
+              @pending_steps.each_with_index do |pending, i|
+                story_name, scenario_name, msg = pending
+                @output.puts "#{i+1}) #{story_name} (#{scenario_name}): #{msg} <br/>"
+              end
+            end
+            unless @failed_scenarios.empty?
+              @output.print "\nFAILURES: <br/>"
+              @failed_scenarios.each_with_index do |failure, i|
+                title, scenario_name, err = failure
+                @output.print %[
+                    #{i+1}) #{title} (#{scenario_name}) FAILED
+                    #{err.class}: #{err.message}
+                    #{err.backtrace.join("<br/>\n")}
+                    ' <br/>'    
+                ]
+              end
+            end            
+
+            @output.puts <<-EOF
+      </p>
     </div>
   </body>
 </head>
@@ -118,14 +150,20 @@ EOF
           end
 
           def scenario_succeeded(story_title, scenario_name)
+            @successful_scenario_count += 1            
             scenario_ended
           end
 
           def scenario_pending(story_title, scenario_name, reason)
+            @pending_scenario_count += 1 unless @scenario_already_failed
+            @scenario_pending = true
+            @scenario_already_failed = true
             scenario_ended
           end
 
           def scenario_failed(story_title, scenario_name, err)
+            @failed_scenarios << [story_title, scenario_name, err] unless @scenario_already_failed            
+            @scenario_already_failed = true
             @scenario_failed = true
             @story_failed = true
             scenario_ended
@@ -139,6 +177,9 @@ EOF
           end
 
           def step_pending(type, description, *args)
+            @pending_steps << [@current_story_title, @current_scenario_name, description]
+            @scenario_pending = true
+            @scenario_ok = false            
             print_step('pending', type, description, *args)
           end
 
