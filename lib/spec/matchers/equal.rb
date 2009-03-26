@@ -1,21 +1,21 @@
 module Spec
   module Matchers
-  
-    class Equal #:nodoc:
+    
+    class Equal
       def initialize(expected)
         @expected = expected
       end
-  
+      
       def matches?(actual)
         @actual = actual
         @actual.equal?(@expected)
       end
-
-      def failure_message
+      
+      def failure_message_for_should
         return "expected #{@expected.inspect}, got #{@actual.inspect} (using .equal?)", @expected, @actual
       end
-
-      def negative_failure_message
+      
+      def failure_message_for_should_not
         return "expected #{@actual.inspect} not to equal #{@expected.inspect} (using .equal?)", @expected, @actual
       end
       
@@ -23,7 +23,7 @@ module Spec
         "equal #{@expected.inspect}"
       end
     end
-    
+  
     # :call-seq:
     #   should equal(expected)
     #   should_not equal(expected)
@@ -37,7 +37,7 @@ module Spec
     #   5.should equal(5) #Fixnums are equal
     #   "5".should_not equal("5") #Strings that look the same are not the same object
     def equal(expected)
-      Matchers::Equal.new(expected)
+      Equal.new(expected)
     end
   end
 end

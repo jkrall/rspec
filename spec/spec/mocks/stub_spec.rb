@@ -14,6 +14,7 @@ module Spec
           end
         end
         @instance = @class.new
+        @stub = Object.new
       end
 
       it "should return expected value when expected message is received" do
@@ -135,6 +136,12 @@ module Spec
         @stub.should_receive(:foo).with("baz")
         @stub.foo("bar")
         @stub.foo("baz")
+      end
+
+      it "calculates return value by executing block passed to #and_return" do
+        @mock.stub!(:something).with("a","b","c").and_return { |a,b,c| c+b+a }
+        @mock.something("a","b","c").should == "cba"
+        @mock.rspec_verify
       end
     end
     

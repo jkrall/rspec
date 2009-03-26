@@ -2,40 +2,83 @@ module Spec
   module Example
     describe Pending do
       
-      it 'should raise an ExamplePendingError if no block is supplied' do
-        lambda {
-          include Pending
-          pending "TODO"
-        }.should raise_error(ExamplePendingError, /TODO/)
+      context "when no block is supplied" do
+        it "raises an ExamplePendingError if no block is supplied" do
+          lambda {
+            pending "TODO"
+          }.should raise_error(ExamplePendingError, /TODO/)
+        end
+
+        it "reports the file and line number" do
+          file = __FILE__
+          line_number = __LINE__ + 2
+          begin
+            pending("TODO")
+          rescue => error
+          ensure
+            error.pending_caller.should =~ /^#{file}:#{line_number}/
+          end
+        end
       end
       
-      it 'should raise an ExamplePendingError if a supplied block fails as expected' do
-        lambda {
-          include Pending
-          pending "TODO" do
-            raise "oops"
+      context "when the supplied block fails" do
+        it "raises an ExamplePendingError if a supplied block fails as expected" do
+          lambda {
+            pending "TODO" do
+              raise "oops"
+            end
+          }.should raise_error(ExamplePendingError, /TODO/)
+        end
+
+        it "reports the file and line number" do
+          file = __FILE__
+          line_number = __LINE__ + 2
+          begin
+            pending do
+              raise
+            end
+          rescue => error
+          ensure
+            error.pending_caller.should =~ /#{file}:#{line_number}/
           end
-        }.should raise_error(ExamplePendingError, /TODO/)
+        end
       end
       
-      it 'should raise an ExamplePendingError if a supplied block fails as expected with a mock' do
-        lambda {
-          include Pending
-          pending "TODO" do
-            m = mock('thing')
-            m.should_receive(:foo)
-            m.rspec_verify
+      context "when the supplied block fails with a mock" do
+        it "raises an ExamplePendingError if a supplied block fails as expected with a mock" do
+          lambda {
+            pending "TODO" do
+              m = mock("thing")
+              m.should_receive(:foo)
+              m.rspec_verify
+            end
+          }.should raise_error(ExamplePendingError, /TODO/)
+        end
+
+        it "reports the file and line number" do
+          file = __FILE__
+          line_number = __LINE__ + 2
+          begin
+            pending do
+              m = mock("thing")
+              m.should_receive(:foo)
+              m.rspec_verify
+            end
+          rescue => error
+          ensure
+            error.pending_caller.should =~ /#{file}:#{line_number}/
           end
-        }.should raise_error(ExamplePendingError, /TODO/)
+        end
       end
       
-      it 'should raise a PendingExampleFixedError if a supplied block starts working' do
-        lambda {
-          include Pending
-          pending "TODO" do
-            # success!
-          end
-        }.should raise_error(PendingExampleFixedError, /TODO/)
+      context "when the supplied block passes" do
+        it "raises a PendingExampleFixedError" do
+          lambda {
+            pending "TODO" do
+              # success!
+            end
+          }.should raise_error(PendingExampleFixedError, /TODO/)
+        end
       end
     end
     
@@ -65,5 +108,57 @@ module Spec
       end
     end
     
+    describe NotYetImplementedError do
+      def rspec_root
+        File.expand_path(__FILE__.gsub("/spec/spec/example/pending_module_spec.rb", "/lib"))
+      end
+      
+      it "should have the root rspec path" do
+        NotYetImplementedError::RSPEC_ROOT_LIB.should == rspec_root
+      end
+      
+      it "should always have the error 'Not Yet Implemented'" do
+        NotYetImplementedError.new([]).message.should == "Not Yet Implemented"
+      end
+      
+      describe "pending_caller" do
+        it "should select an element out of the backtrace" do
+          error = NotYetImplementedError.new(["foo/bar.rb:18"])
+          
+          error.pending_caller.should == "foo/bar.rb:18"
+        end
+        
+        it "should actually report the element from the backtrace" do
+          error = NotYetImplementedError.new(["bar.rb:18"])
+          
+          error.pending_caller.should == "bar.rb:18"
+        end
+        
+        it "should not use an element with the rspec root path" do
+          error = NotYetImplementedError.new(["#{rspec_root}:8"])
+          
+          error.pending_caller.should be_nil
+        end
+        
+        it "should select the first line in the backtrace which isn't in the rspec root" do
+          error = NotYetImplementedError.new([
+            "#{rspec_root}/foo.rb:2",
+            "#{rspec_root}/foo/bar.rb:18",
+            "path1.rb:22",
+            "path2.rb:33"
+          ])
+          
+          error.pending_caller.should == "path1.rb:22"
+        end
+        
+        it "should cache the caller" do
+          backtrace = mock('backtrace')
+          backtrace.should_receive(:detect).once
+          
+          error = NotYetImplementedError.new(backtrace)
+          error.pending_caller.should == error.pending_caller
+        end
+      end
+    end
   end
 end

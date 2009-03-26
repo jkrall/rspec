@@ -4,6 +4,7 @@ module Spec
       def initialize(expected, relativity=:exactly)
         @expected = (expected == :no ? 0 : expected)
         @relativity = relativity
+        @actual = nil
       end
     
       def relativities
@@ -36,11 +37,11 @@ module Spec
         "expected #{@collection_name} to be a collection but it does not respond to #length or #size"
       end
     
-      def failure_message
+      def failure_message_for_should
         "expected #{relative_expectation} #{@collection_name}, got #{@actual}"
       end
 
-      def negative_failure_message
+      def failure_message_for_should_not
         if @relativity == :exactly
           return "expected target not to have #{@expected} #{@collection_name}, got #{@actual}"
         elsif @relativity == :at_most

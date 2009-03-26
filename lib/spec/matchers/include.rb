@@ -1,8 +1,8 @@
 module Spec
   module Matchers
-
     class Include #:nodoc:
-      
+      include Spec::Matchers::Pretty
+
       def initialize(*expecteds)
         @expecteds = expecteds
       end
@@ -10,16 +10,26 @@ module Spec
       def matches?(actual)
         @actual = actual
         @expecteds.each do |expected|
-          return false unless actual.include?(expected)
+          if actual.is_a?(Hash)
+            if expected.is_a?(Hash)
+              expected.each_pair do |k,v|
+                return false unless actual[k] == v
+              end
+            else
+              return false unless actual.has_key?(expected)
+            end
+          else
+            return false unless actual.include?(expected)
+          end
         end
         true
       end
       
-      def failure_message
+      def failure_message_for_should
         _message
       end
       
-      def negative_failure_message
+      def failure_message_for_should_not
         _message("not ")
       end
       
@@ -30,20 +40,6 @@ module Spec
       private
         def _message(maybe_not="")
           "expected #{@actual.inspect} #{maybe_not}to include #{_pretty_print(@expecteds)}"
-        end
-        
-        def _pretty_print(array)
-          result = ""
-          array.each_with_index do |item, index|
-            if index < (array.length - 2)
-              result << "#{item.inspect}, "
-            elsif index < (array.length - 1)
-              result << "#{item.inspect} and "
-            else
-              result << "#{item.inspect}"
-            end
-          end
-          result
         end
     end
 

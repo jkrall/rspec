@@ -1,10 +1,9 @@
 module Spec
   module Matchers
-
-    class BeClose #:nodoc:
+    
+    class BeClose
       def initialize(expected, delta)
-        @expected = expected
-        @delta = delta
+        @expected, @delta = expected, delta
       end
       
       def matches?(actual)
@@ -12,7 +11,7 @@ module Spec
         (@actual - @expected).abs < @delta
       end
       
-      def failure_message
+      def failure_message_for_should
         "expected #{@expected} +/- (< #{@delta}), got #{@actual}"
       end
       
@@ -20,7 +19,7 @@ module Spec
         "be close to #{@expected} (within +- #{@delta})"
       end
     end
-    
+
     # :call-seq:
     #   should be_close(expected, delta)
     #   should_not be_close(expected, delta)
@@ -31,7 +30,7 @@ module Spec
     #
     #   result.should be_close(3.0, 0.5)
     def be_close(expected, delta)
-      Matchers::BeClose.new(expected, delta)
+      BeClose.new(expected, delta)
     end
   end
 end
