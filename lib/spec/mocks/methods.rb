@@ -9,11 +9,34 @@ module Spec
         __mock_proxy.add_negative_message_expectation(caller(1)[0], sym.to_sym, &block)
       end
       
-      def stub!(sym_or_hash, opts={})
+      def stub!(sym_or_hash, opts={}, &block)
         if Hash === sym_or_hash
           sym_or_hash.each {|method, value| stub!(method).and_return value }
         else
-          __mock_proxy.add_stub(caller(1)[0], sym_or_hash.to_sym, opts)
+          __mock_proxy.add_stub(caller(1)[0], sym_or_hash.to_sym, opts, &block)
+        end
+      end
+      
+      alias_method :stub, :stub!
+
+      def unstub!(message)
+        __mock_proxy.remove_stub(message)
+      end
+
+      alias_method :unstub, :unstub!
+
+      def stub_chain(*methods)
+        if methods.length > 1
+          if matching_stub = __mock_proxy.find_matching_method_stub(methods[0])
+            methods.shift
+            matching_stub.invoke_return_block.stub_chain(*methods)
+          else
+            next_in_chain = Object.new
+            stub!(methods.shift) {next_in_chain}
+            next_in_chain.stub_chain(*methods)
+          end
+        else
+          stub!(methods.shift)
         end
       end
       
